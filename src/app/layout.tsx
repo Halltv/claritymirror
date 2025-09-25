@@ -1,0 +1,41 @@
+/**
+ * @fileoverview Layout raiz da aplicação.
+ * 
+ * Responsabilidades:
+ * - Definir a estrutura HTML base para todas as páginas (<html>, <head>, <body>).
+ * - Importar e aplicar o arquivo de estilos globais (`globals.css`).
+ * - Carregar as fontes da aplicação (neste caso, a fonte 'Inter' do Google Fonts).
+ * - Incluir o componente `Toaster`, que é o container global para todas as notificações (toasts) da aplicação.
+ */
+
+import type { Metadata } from 'next';
+import './globals.css';
+import { Toaster } from '@/components/ui/toaster';
+
+export const metadata: Metadata = {
+  title: 'ERP Financeiro',
+  description: 'Sistema de Gestão Integrado',
+};
+
+export default function RootLayout({
+  children,
+}: Readonly<{
+  children: React.ReactNode;
+}>) {
+  return (
+    <html lang="en" suppressHydrationWarning>
+      <head>
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        <link
+          href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
+          rel="stylesheet"
+        />
+      </head>
+      <body className="font-body bg-background text-foreground antialiased">
+          {children}
+          <Toaster />
+      </body>
+    </html>
+  );
+}
