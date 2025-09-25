@@ -1,3 +1,14 @@
+/**
+ * @fileoverview Componente de cliente que renderiza o formulário interativo de projeção de fluxo de caixa.
+ *
+ * Responsabilidades:
+ * - Gerenciar o estado do formulário para saldo atual e despesas projetadas.
+ * - Utilizar `react-hook-form` e `zod` para validação dos dados de entrada.
+ * - Permitir a adição e remoção dinâmica de campos de despesa.
+ * - Calcular e exibir o resultado da projeção (total de receitas, despesas e fluxo de caixa projetado).
+ * - Exibir estados de carregamento durante o cálculo.
+ */
+
 'use client';
 
 import { useState } from 'react';
@@ -19,30 +30,48 @@ import { Loader2, PlusCircle, Calculator, Trash2, TrendingUp, ShoppingBag } from
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
 
+/**
+ * Esquema de validação para um item de receita ou despesa.
+ */
 const projectedItemSchema = z.object({
   description: z.string().min(1, 'Descrição é obrigatória.'),
   amount: z.coerce.number().min(0, 'Valor deve ser positivo.'),
 });
 
+/**
+ * Esquema de validação para o formulário principal de fluxo de caixa.
+ */
 const formSchema = z.object({
   currentBalance: z.coerce.number().min(0, 'O saldo deve ser positivo.'),
-  // As receitas de pedidos não fazem parte do formulário editável
   projectedExpenses: z.array(projectedItemSchema).min(1, 'Adicione ao menos uma despesa.'),
 });
 
 type FormValues = z.infer<typeof formSchema>;
 type ProjectedItem = z.infer<typeof projectedItemSchema>;
 
+/**
+ * Estrutura do objeto que armazena o resultado do cálculo do fluxo de caixa.
+ */
 interface CalculationResult {
     projectedCashFlow: number;
     totalIncome: number;
     totalExpenses: number;
 }
 
+/**
+ * Propriedades para o componente `CashFlowForm`.
+ */
 interface CashFlowFormProps {
+    /**
+     * Lista de receitas projetadas, geralmente vindas de pedidos faturados.
+     */
     initialProjectedIncome: ProjectedItem[];
 }
 
+/**
+ * Componente de formulário para cálculo de projeção de fluxo de caixa.
+ * @param {CashFlowFormProps} props As propriedades do componente.
+ */
 export function CashFlowForm({ initialProjectedIncome }: CashFlowFormProps) {
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<CalculationResult | null>(null);
@@ -63,6 +92,10 @@ export function CashFlowForm({ initialProjectedIncome }: CashFlowFormProps) {
     name: 'projectedExpenses',
   });
 
+  /**
+   * Manipula a submissão do formulário, calcula e exibe os resultados da projeção.
+   * @param data Os dados validados do formulário.
+   */
   async function onSubmit(data: FormValues) {
     setLoading(true);
     setResult(null);

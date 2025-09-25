@@ -1,10 +1,11 @@
 /**
- * @fileoverview Página para a funcionalidade de análise de Fluxo de Caixa, agora integrada com dados de pedidos.
+ * @fileoverview Página para a funcionalidade de análise de Fluxo de Caixa.
  *
  * Responsabilidades:
- * - Busca dados da coleção 'orders' no Firestore para usar como receitas.
+ * - Busca dados da coleção 'orders' no Firestore para usar como receitas projetadas.
+ * - Espera a autenticação do usuário antes de buscar os dados.
  * - Exibe um estado de carregamento enquanto os dados são buscados.
- * - Passa os dados de receita e o formulário para o componente de cliente `CashFlowForm`.
+ * - Passa os dados de receita para o componente de cliente `CashFlowForm` para interação do usuário.
  */
 
 'use client';
@@ -44,6 +45,7 @@ export default function CashFlowPage() {
     }
   }, [user, authLoading]);
 
+  // Mapeia os pedidos buscados para o formato esperado pelo formulário.
   const projectedIncomeFromOrders = orders.map(order => ({
     description: `Pedido ${order.id.substring(0, 7)}`,
     amount: order.amount,

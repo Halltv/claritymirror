@@ -54,8 +54,8 @@ export default function LoginPage() {
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      email: 'admin@claritymirror.com',
-      password: 'password123',
+      email: '',
+      password: '',
     },
   });
 

@@ -1,16 +1,15 @@
-
-
 /**
  * @fileoverview Componente de cliente que gerencia o estado e a interatividade da página de Orçamentos.
  *
  * Responsabilidades:
  * - Receber a lista inicial de orçamentos e mantê-la no estado.
  * - Renderizar a tabela de orçamentos ou um estado vazio se não houver nenhum.
- * - Gerenciar a abertura e o estado do diálogo `NovoOrcamentoDialog` para criar novos orçamentos.
+ * - Gerenciar a abertura do diálogo `NovoOrcamentoDialog` para criar novos orçamentos.
  * - Implementar as ações do menu de cada orçamento:
- *   - Atualizar o status de um orçamento (Aprovar/Rejeitar).
+ *   - Atualizar o status (Aprovar/Rejeitar).
  *   - Gerar um novo pedido no Firestore a partir de um orçamento aprovado.
- * - Atualizar o estado local para refletir as mudanças na UI em tempo real.
+ *   - Gerar e baixar um PDF do orçamento.
+ * - Manter um estado (`linkedIds`) para desabilitar a ação "Gerar Pedido" se um já foi criado.
  * - Exibir toasts de feedback para o usuário.
  */
 
@@ -54,24 +53,36 @@ import html2canvas from 'html2canvas';
 import { OrcamentoPdfLayout } from './orcamento-pdf-layout';
 
 
+/** Mapeia o status do orçamento para a variante de cor do Badge. */
 const statusVariantMap: { [key in Orcamento['status']]: 'warning' | 'success' | 'destructive' } = {
   'Pendente': 'warning',
   'Aprovado': 'success',
   'Rejeitado': 'destructive',
 };
 
+/** Propriedades para o componente `OrcamentosContent`. */
 interface OrcamentosContentProps {
+    /** A lista inicial de orçamentos a ser exibida. */
     initialOrcamentos: Orcamento[];
+    /** Uma lista de IDs de orçamentos que já estão vinculados a um pedido. */
     orderLinkedOrcamentoIds: string[];
 }
 
+/**
+ * Componente principal que renderiza o conteúdo da página de Orçamentos.
+ * @param {OrcamentosContentProps} props As propriedades do componente.
+ */
 export function OrcamentosContent({ initialOrcamentos, orderLinkedOrcamentoIds }: OrcamentosContentProps) {
   const [orcamentos, setOrcamentos] = useState<Orcamento[]>(initialOrcamentos || []);
   const [generatingPdf, setGeneratingPdf] = useState<string | null>(null);
   const { toast } = useToast();
-  // Mantém um conjunto de IDs de orçamentos que já geraram um pedido.
+  // Mantém um conjunto de IDs de orçamentos que já geraram um pedido para controle de UI.
   const [linkedIds, setLinkedIds] = useState(new Set(orderLinkedOrcamentoIds));
 
+  /**
+   * Adiciona um novo orçamento à lista localmente após ser criado no banco de dados.
+   * @param novoOrcamento O objeto do orçamento recém-criado.
+   */
   const handleOrcamentoCriado = (novoOrcamento: Orcamento) => {
     setOrcamentos(prev => [novoOrcamento, ...prev].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()));
   };
@@ -97,6 +108,7 @@ export function OrcamentosContent({ initialOrcamentos, orderLinkedOrcamentoIds }
 
   /**
    * Cria um novo pedido no Firestore a partir de um orçamento aprovado.
+   * Garante que um pedido não seja duplicado e atualiza o status do orçamento se necessário.
    * @param orcamento O orçamento que servirá de base para o novo pedido.
    */
   const handleGenerateOrder = async (orcamento: Orcamento) => {
@@ -110,7 +122,7 @@ export function OrcamentosContent({ initialOrcamentos, orderLinkedOrcamentoIds }
         description: "Este orçamento já foi usado para gerar um pedido.",
         variant: "destructive",
       });
-      // Adiciona ao set de IDs vinculados para garantir que a UI seja atualizada.
+      // Garante que a UI seja atualizada caso o estado local esteja dessincronizado.
       setLinkedIds(prev => new Set(prev).add(orcamento.id));
       return;
     }
@@ -130,14 +142,14 @@ export function OrcamentosContent({ initialOrcamentos, orderLinkedOrcamentoIds }
     };
 
     try {
-      // Usar um batch para garantir atomicidade
+      // Usa um batch para garantir a atomicidade das operações de escrita.
       const batch = writeBatch(db);
 
-      // 2. Cria um novo pedido no Firestore.
+      // 2. Cria o novo pedido no Firestore.
       const newOrderRef = doc(collection(db, 'orders'));
       batch.set(newOrderRef, newOrderData);
       
-      // 3. Atualiza o status do orçamento para 'Aprovado' se ainda não estiver.
+      // 3. Atualiza o status do orçamento para 'Aprovado' se ele ainda estiver 'Pendente'.
       if (orcamento.status !== 'Aprovado') {
         const orcamentoRef = doc(db, 'orcamentos', orcamento.id);
         batch.update(orcamentoRef, { status: 'Aprovado' });
@@ -145,7 +157,7 @@ export function OrcamentosContent({ initialOrcamentos, orderLinkedOrcamentoIds }
 
       await batch.commit();
 
-      // 4. Atualiza o estado local
+      // 4. Atualiza o estado local para refletir as mudanças na UI.
       setOrcamentos(prev => prev.map(o => o.id === orcamento.id ? { ...o, status: 'Aprovado' } : o));
       setLinkedIds(prev => new Set(prev).add(orcamento.id));
 
@@ -159,6 +171,10 @@ export function OrcamentosContent({ initialOrcamentos, orderLinkedOrcamentoIds }
     }
   };
   
+  /**
+   * Gera um PDF a partir do layout do orçamento e inicia o download.
+   * @param orcamento O orçamento a ser transformado em PDF.
+   */
   const handleViewPdf = async (orcamento: Orcamento) => {
     setGeneratingPdf(orcamento.id);
     const pdfElement = document.getElementById(`pdf-layout-${orcamento.id}`);
@@ -190,8 +206,7 @@ export function OrcamentosContent({ initialOrcamentos, orderLinkedOrcamentoIds }
       const ratio = canvasWidth / canvasHeight;
       const height = pdfWidth / ratio;
       
-      // Se a altura for maior que a página, precisaremos de múltiplas páginas (não implementado ainda)
-      // Por agora, vamos ajustar a imagem à página
+      // Ajusta a imagem à largura da página.
       const finalHeight = height > pdfHeight ? pdfHeight : height;
 
       pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, finalHeight);
@@ -215,7 +230,7 @@ export function OrcamentosContent({ initialOrcamentos, orderLinkedOrcamentoIds }
         <NovoOrcamentoDialog onOrcamentoCriado={handleOrcamentoCriado} />
       </PageHeader>
       
-      {/* Elementos ocultos para renderização do PDF */}
+      {/* Elementos ocultos para renderização do PDF. Eles não são visíveis na UI. */}
       <div className="absolute top-0 left-0 w-[800px] -z-10 opacity-0" aria-hidden>
         {orcamentos.map(orcamento => (
           <div key={`pdf-${orcamento.id}`} id={`pdf-layout-${orcamento.id}`}>

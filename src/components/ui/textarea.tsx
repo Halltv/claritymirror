@@ -1,8 +1,21 @@
+/**
+ * @fileoverview Componente de UI para uma área de texto (textarea) estilizada.
+ *
+ * Este é um componente de apresentação que encapsula um elemento `<textarea>`
+ * com os estilos do Tailwind CSS definidos para o projeto, garantindo consistência visual.
+ */
+
 import * as React from 'react';
 
 import {cn} from '@/lib/utils';
 
-const Textarea = React.forwardRef<HTMLTextAreaElement, React.ComponentProps<'textarea'>>(
+/**
+ * Propriedades para o componente `Textarea`.
+ */
+export interface TextareaProps
+  extends React.TextareaHTMLAttributes<HTMLTextAreaElement> {}
+
+const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
   ({className, ...props}, ref) => {
     return (
       <textarea

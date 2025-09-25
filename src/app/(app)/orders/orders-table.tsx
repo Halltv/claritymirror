@@ -1,3 +1,13 @@
+/**
+ * @fileoverview Componente que renderiza a tabela de pedidos.
+ *
+ * Responsabilidades:
+ * - Exibir os dados dos pedidos em uma tabela estruturada.
+ * - Mostrar o status de cada pedido com um `Badge` colorido.
+ * - Fornecer um menu de ações (`DropdownMenu`) para cada pedido, como "Marcar como Faturado".
+ * - Lidar com a lógica de atualização do status de um pedido no Firestore quando uma ação é acionada.
+ * - Invocar o callback `onOrderUpdate` para notificar o componente pai sobre a mudança de estado.
+ */
 
 "use client";
 
@@ -24,7 +34,7 @@ import { useToast } from "@/hooks/use-toast";
 import { doc, updateDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 
-
+/** Mapeia o status do pedido para a variante de cor do Badge. */
 const statusVariantMap: { [key in Order['status']]: 'default' | 'secondary' | 'destructive' | 'outline' | 'success' } = {
   'Processando': 'default',
   'Enviado': 'secondary',
@@ -34,14 +44,26 @@ const statusVariantMap: { [key in Order['status']]: 'default' | 'secondary' | 'd
   'Faturado': 'success',
 };
 
+/** Propriedades para o componente `OrdersTable`. */
 interface OrdersTableProps {
+  /** A lista de pedidos a ser renderizada. */
   orders: Order[];
+  /** Função de callback para notificar o componente pai sobre uma atualização de pedido. */
   onOrderUpdate: (updatedOrder: Order) => void;
 }
 
+/**
+ * Renderiza uma tabela de pedidos com ações.
+ * @param {OrdersTableProps} props As propriedades do componente.
+ */
 export function OrdersTable({ orders, onOrderUpdate }: OrdersTableProps) {
   const { toast } = useToast();
 
+  /**
+   * Marca um pedido como 'Faturado' e zera o valor pendente.
+   * Esta é uma ação de controle interno.
+   * @param orderToBill O pedido a ser faturado.
+   */
   const handleMarkAsBilled = async (orderToBill: Order) => {
     if (orderToBill.outstanding === 0) return;
 

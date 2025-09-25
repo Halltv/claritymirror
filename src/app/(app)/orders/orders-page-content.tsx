@@ -2,8 +2,10 @@
  * @fileoverview Componente de cliente que gerencia o estado e a interatividade da página de Pedidos.
  *
  * Responsabilidades:
- * - Gerenciar o estado da lista de pedidos.
- * - Atualizar o estado dos pedidos quando uma ação é executada (ex: marcar como faturado).
+ * - Receber a lista inicial de pedidos e mantê-la em um estado local (`orders`).
+ * - Fornecer a funcionalidade para exportar a lista de pedidos para um arquivo CSV.
+ * - Renderizar o cabeçalho da página e o `OrdersTable` com os dados e callbacks necessários.
+ * - Atualizar a lista de pedidos quando um pedido é modificado (ex: faturado).
  */
 'use client';
 
@@ -15,15 +17,24 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { File } from 'lucide-react';
 
+/**
+ * Propriedades para o componente `OrdersPageContent`.
+ */
 interface OrdersPageContentProps {
+  /** A lista de pedidos buscada inicialmente do servidor. */
   initialOrders: Order[];
 }
 
+/**
+ * Componente que renderiza o conteúdo principal da página de Pedidos.
+ * @param {OrdersPageContentProps} props As propriedades do componente.
+ */
 export function OrdersPageContent({ initialOrders }: OrdersPageContentProps) {
   const [orders, setOrders] = useState<Order[]>(initialOrders);
 
   /**
-   * Atualiza um único pedido no estado local.
+   * Callback para atualizar um único pedido no estado local.
+   * @param updatedOrder O objeto do pedido com os dados atualizados.
    */
   const handleOrderUpdate = (updatedOrder: Order) => {
     setOrders(prevOrders => 
@@ -33,6 +44,9 @@ export function OrdersPageContent({ initialOrders }: OrdersPageContentProps) {
     );
   };
 
+  /**
+   * Converte a lista de pedidos para CSV e inicia o download.
+   */
   const exportToCsv = () => {
     const headers = ['Pedido', 'Cliente', 'Email', 'Data', 'Status', 'Total', 'Pendente'];
     
@@ -50,15 +64,13 @@ export function OrdersPageContent({ initialOrders }: OrdersPageContentProps) {
     const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' });
     
     const link = document.createElement("a");
-    if (link.href) {
-      URL.revokeObjectURL(link.href);
-    }
     const url = URL.createObjectURL(blob);
     link.href = url;
     link.setAttribute("download", "pedidos.csv");
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+    URL.revokeObjectURL(link.href);
   };
 
 

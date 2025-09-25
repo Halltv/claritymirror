@@ -1,17 +1,19 @@
 /**
  * @fileoverview
  * Este arquivo é responsável pela inicialização e configuração do Firebase Admin SDK no servidor.
- * Ele exporta a instância do Admin SDK para ser utilizada em Server Actions e rotas de API
- * para realizar operações privilegiadas, como criar usuários ou acessar dados com regras de segurança elevadas.
+ * O Admin SDK permite interações privilegiadas com os serviços do Firebase, como o Auth e o Firestore,
+ * bypassando as regras de segurança. É essencial para operações de back-end, como gerenciamento de usuários.
+ *
+ * **IMPORTANTE:** Este arquivo e suas credenciais só devem ser usados no lado do servidor (Server Actions, API Routes).
  */
 
 import admin from 'firebase-admin';
 
-// Verifica se já existem apps inicializados para evitar erros de reinicialização.
+// Evita a reinicialização do app, um erro comum em ambientes de desenvolvimento com hot-reloading.
 if (!admin.apps.length) {
   try {
-    // Tenta inicializar usando as variáveis de ambiente, que é a forma mais segura.
-    // O `replace` é necessário porque as variáveis de ambiente não lidam bem com quebras de linha.
+    // Inicializa o Admin SDK usando as credenciais fornecidas pelas variáveis de ambiente.
+    // O `replace` é um workaround para lidar com a formatação de chaves privadas em variáveis de ambiente.
     admin.initializeApp({
       credential: admin.credential.cert({
         projectId: process.env.SERVICE_ACCOUNT_PROJECT_ID,
@@ -21,12 +23,14 @@ if (!admin.apps.length) {
     });
   } catch (error) {
     console.error("Falha ao inicializar o Firebase Admin:", error);
-    // Em produção, você pode querer lidar com isso de forma mais robusta.
+    // Em um ambiente de produção, seria ideal ter um mecanismo de alerta para essa falha.
   }
 }
 
-// Exporta o serviço de autenticação do Admin SDK.
-// A verificação `admin.apps.length` garante que só tentaremos acessar `auth()` se a inicialização foi bem-sucedida.
+/**
+ * Instância do serviço de autenticação do Admin SDK.
+ * É exportada como `null` se a inicialização falhar para evitar erros em cascata.
+ */
 const adminAuth = admin.apps.length ? admin.auth() : null;
 
 export { adminAuth };

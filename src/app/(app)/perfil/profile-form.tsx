@@ -1,3 +1,13 @@
+/**
+ * @fileoverview Formulário para atualização do perfil do usuário.
+ *
+ * Responsabilidades:
+ * - Apresentar um formulário para que o usuário possa editar seu nome de exibição.
+ * - Utilizar o hook `useAuth` para obter os dados do usuário atual e a função de atualização.
+ * - Chamar a função `updateProfile` do Firebase Auth ao submeter o formulário.
+ * - Exibir feedback ao usuário (sucesso ou erro) através de toasts.
+ * - Recarregar a página após o sucesso para garantir que todos os componentes (como o `UserNav`) reflitam a alteração.
+ */
 
 'use client';
 
@@ -28,6 +38,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { Loader2 } from 'lucide-react';
 
+/** Esquema de validação para o formulário de perfil. */
 const profileSchema = z.object({
   displayName: z.string().min(2, 'O nome deve ter pelo menos 2 caracteres.'),
 });
@@ -40,6 +51,7 @@ export function ProfileForm() {
 
   const form = useForm<ProfileFormValues>({
     resolver: zodResolver(profileSchema),
+    // Preenche o formulário com os dados do usuário atual.
     values: {
       displayName: user?.displayName || '',
     },
@@ -47,6 +59,10 @@ export function ProfileForm() {
 
   const { isSubmitting } = form.formState;
 
+  /**
+   * Manipula a submissão do formulário para atualizar o perfil do usuário.
+   * @param data Os dados do formulário validados.
+   */
   async function onSubmit(data: ProfileFormValues) {
     if (!user) {
       toast({ title: 'Usuário não encontrado', variant: 'destructive' });
@@ -56,7 +72,7 @@ export function ProfileForm() {
     try {
       await updateProfile(user, {
         displayName: data.displayName,
-        photoURL: '', // Remove a photoURL ao atualizar
+        photoURL: user.photoURL, // Mantém a photoURL existente, se houver
       });
 
       toast({
@@ -64,7 +80,7 @@ export function ProfileForm() {
         description: 'Suas informações foram salvas com sucesso.',
       });
       
-      // Forçar uma recarga para que o user-nav e outros componentes peguem os novos dados.
+      // Força uma recarga para que o user-nav e outros componentes peguem os novos dados.
       window.location.reload();
     } catch (error: any) {
       console.error('Erro ao atualizar perfil:', error);

@@ -1,3 +1,10 @@
+/**
+ * @fileoverview Página de Perfil do Usuário.
+ *
+ * Responsabilidades:
+ * - Exibir o cabeçalho da página.
+ * - Renderizar o componente `ProfileForm` que contém a lógica para atualização do perfil.
+ */
 
 import { PageHeader } from "@/components/page-header";
 import { ProfileForm } from "./profile-form";

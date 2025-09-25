@@ -1,11 +1,12 @@
 /**
- * @fileoverview Página de Orçamentos, agora como um componente de cliente para lidar com regras de segurança.
+ * @fileoverview Página de Orçamentos, responsável por buscar os dados iniciais do servidor.
  *
  * Responsabilidades:
- * - Esperar a confirmação de autenticação do usuário usando o hook `useAuth`.
- * - Buscar a lista inicial de orçamentos e os IDs de pedidos vinculados somente após o usuário ser autenticado.
- * - Exibir um estado de carregamento enquanto os dados são buscados.
- * - Passar os dados para o componente `OrcamentosContent` para renderização.
+ * - Atua como um Server Component para buscar os dados no lado do servidor.
+ * - Espera a confirmação de autenticação do usuário usando o hook `useAuth`.
+ * - Busca a lista inicial de orçamentos e os IDs de orçamentos já vinculados a pedidos.
+ * - Exibe um estado de carregamento (`Skeleton`) enquanto os dados são buscados.
+ * - Passa os dados para o componente de cliente `OrcamentosContent` para renderização e interatividade.
  */
 'use client';
 
@@ -26,7 +27,9 @@ export default function OrcamentosPage() {
     if (!authLoading && user) {
       const getOrcamentosData = async () => {
         try {
+          // Busca todos os orçamentos, ordenados pelos mais recentes.
           const orcamentosQuery = query(collection(db, 'orcamentos'), orderBy('createdAt', 'desc'));
+          // Busca todos os pedidos que têm um orcamentoId, para saber quais orçamentos já geraram um pedido.
           const ordersQuery = query(collection(db, 'orders'), where('orcamentoId', '!=', null));
 
           const [orcamentosSnapshot, ordersSnapshot] = await Promise.all([
@@ -36,6 +39,7 @@ export default function OrcamentosPage() {
 
           const orcamentos = orcamentosSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Orcamento));
           
+          // Cria um conjunto de IDs de orçamentos que já foram convertidos em pedidos.
           const linkedOrcamentoIds = new Set<string>();
           ordersSnapshot.forEach(doc => {
             const order = doc.data() as Order;
